@@ -1,7 +1,19 @@
+const express = require('express');
+const axios = require('axios');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// API KEY mo (direkta na para sigurado)
+const API_KEY = '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';
+
+app.use(express.static('public'));
+app.use(express.json());
+
 app.post('/chat', async (req, res) => {
     try {
         const { message } = req.body;
-        console.log('1. Message received:', message);
         
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
             model: 'openai/gpt-3.5-turbo',
@@ -18,18 +30,12 @@ app.post('/chat', async (req, res) => {
             }
         });
 
-        console.log('2. API Response OK');
         res.json({ reply: response.data.choices[0].message.content });
 
     } catch (error) {
-        console.error('3. ERROR DETAILS:', {
-            message: error.message,
-            status: error.response?.status,
-            data: error.response?.data
-        });
-        
-        res.json({ 
-            reply: 'Server error: ' + (error.response?.data?.error?.message || error.message)
-        });
+        console.log(error.message);
+        res.json({ reply: 'Error: ' + error.message });
     }
 });
+
+module.exports = app;
