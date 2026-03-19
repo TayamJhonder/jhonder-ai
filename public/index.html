@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jhonder AI Assistant</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    height: 100vh;
+    background: linear-gradient(135deg, #1a0000, #000);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Chat Container */
+.chat-container {
+    width: 100%;
+    max-width: 500px;
+    height: 100vh;
+    backdrop-filter: blur(20px);
+    background: rgba(255, 0, 60, 0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.header {
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255,0,60,0.2);
+}
+
+/* Logo Image */
+.logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid crimson;
+}
+
+/* Name */
+.name {
+    color: #ff4d6d;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Chat Area */
+.chat-box {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+/* Message Row */
+.message-row {
+    display: flex;
+    margin: 6px 0;
+    align-items: flex-end;
+}
+
+.message-row.user {
+    justify-content: flex-end;
+}
+
+.message-row.bot {
+    justify-content: flex-start;
+}
+
+/* Bubble */
+.bubble {
+    padding: 10px 14px;
+    border-radius: 18px;
+    max-width: 75%;
+    font-size: 14px;
+    animation: fadeIn 0.2s ease;
+}
+
+/* User Bubble */
+.user .bubble {
+    background: linear-gradient(135deg, #ff1744, #ff4569);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+/* Bot Bubble */
+.bot .bubble {
+    background: rgba(255,255,255,0.1);
+    color: #ffd6dc;
+    border-bottom-left-radius: 4px;
+}
+
+/* Typing */
+.typing {
+    display: flex;
+    gap: 4px;
+    padding: 10px;
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    background: #ff4d6d;
+    border-radius: 50%;
+    animation: bounce 1s infinite;
+}
+
+.dot:nth-child(2){ animation-delay: 0.2s; }
+.dot:nth-child(3){ animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%,80%,100% {transform: scale(0);}
+    40% {transform: scale(1);}
+}
+
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+/* Input */
+.input-area {
+    display: flex;
+    padding: 8px;
+    border-top: 1px solid rgba(255,0,60,0.2);
+}
+
+input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+button {
+    margin-left: 6px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 50%;
+    background: #ff1744;
+    color: white;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <div class="header">
+        <!-- FREE LOGO (Deepseek-style placeholder) -->
+        <img class="logo" src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+        <div class="name">Jhonder AI Assistant</div>
+    </div>
+
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Aa">
+        <button onclick="sendMessage()">➤</button>
+    </div>
+
+</div>
+
+<script>
+const chatBox = document.getElementById("chatBox");
+
+function addMessage(text, type) {
+    const row = document.createElement("div");
+    row.className = "message-row " + type;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.innerText = text;
+
+    row.appendChild(bubble);
+    chatBox.appendChild(row);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function showTyping() {
+    const row = document.createElement("div");
+    row.className = "message-row bot";
+    row.id = "typing";
+
+    const typing = document.createElement("div");
+    typing.className = "bubble typing";
+
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        typing.appendChild(dot);
+    }
+
+    row.appendChild(typing);
+    chatBox.appendChild(row);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function removeTyping() {
+    const typing = document.getElementById("typing");
+    if (typing) typing.remove();
+}
+
+// Ito yung gagamit ng server.js na may API key
+async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Show user message
+    addMessage(text, "user");
+    input.value = "";
+
+    // Show typing indicator
+    showTyping();
+
+    try {
+        // Send to server (yung server.js ang may API key)
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        });
+
+        const data = await response.json();
+        
+        removeTyping();
+        addMessage(data.reply, "bot");
+        
+    } catch (error) {
+        removeTyping();
+        addMessage("Error connecting to server", "bot");
+        console.error(error);
+    }
+}
+
+// Enter key
+document.getElementById("userInput").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") sendMessage();
+});
+
+// Welcome message
+window.onload = function() {
+    addMessage("Hello! I'm Jhonder AI Assistant. How can I help you today?", "bot");
+}
+</script>
+
+</body>
+</html>
